@@ -10,9 +10,9 @@
 .env.production
 .env.development
 /backend/tsconfig.json
-/backend/src/
-/backend/out/
-/backend/build/
+/backend/src
+/backend/out
+/backend/build
 
 
 # Debug logs
