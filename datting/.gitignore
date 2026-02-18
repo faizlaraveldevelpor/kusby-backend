@@ -3,16 +3,15 @@ node_modules/
 jspm_packages/
 
 # TypeScript build output
+dist/
+out/
+build/
 
 # Environment variables (Private Keys)
 .env
 .env.local
 .env.production
 .env.development
-tsconfig.json
-src/
-out/
-build/
 
 
 # Debug logs
