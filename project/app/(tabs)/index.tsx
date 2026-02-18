@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaTop } from '@/hooks/useSafeAreaTop';
 
 import Hometop from '../../components/home/Hometop';
@@ -44,22 +45,24 @@ export default function HomeScreen() {
     else setIsFetchingNextPage(true);
 
     try {
+      const profession = profileSlice.profession;
+      const interests = (filterintrests?.length ? filterintrests : profileSlice.interests) || [];
       const res = await fetchProfiles(
         profileSlice.id,
         {
           minAge: filterage?.length > 0 ? filterage[0] : 18,
           maxAge: filterage?.length > 0 ? filterage[1] : 40,
           maxDistance: filterdistance?.length > 0 ? filterdistance[1] : 100,
-          genderFilter: genderfilter ?? profileSlice.gender,
-          professionFilter: [profileSlice.profession],
-          userInterests: filterintrests?.length > 0 ? filterintrests : profileSlice.interests,
-          cetagory: filtercetagory ?? profileSlice?.cetagory,
+          genderFilter: genderfilter ?? profileSlice.gender ?? undefined,
+          professionFilter: profession ? [profession] : [],
+          userInterests: Array.isArray(interests) ? interests : [],
+          cetagory: filtercetagory ?? profileSlice?.cetagory ?? undefined,
         },
         pageNum,
       );
 
-      if (res === 'Daily swipe limit reached.') {
-        setswipelimit(res);
+      if (res?.message === 'Daily swipe limit reached.') {
+        setswipelimit(res.message);
         dispatch(allprofilesFnc(isNewFilter ? [] : allprofileSlice));
         setHasMore(false);
         setPage(pageNum);
@@ -68,7 +71,7 @@ export default function HomeScreen() {
         return;
       }
 
-      if (res && res.data) {
+      if (res && Array.isArray(res.data)) {
         const newData = res.data.map((u: any) => ({
           id: u.id,
           full_name: u.full_name || 'Unknown',
@@ -122,6 +125,18 @@ useEffect(() => {
     }
   }, [profileSlice?.id, filterintrests, filterage, genderfilter, filterdistance]);
 
+  // Jab Home tab focus ho aur profile ready ho lekin list khali ho to fetch (pehli load / late profile fix)
+  useFocusEffect(
+    useCallback(() => {
+      if (!profileSlice?.id) return;
+      const list = allprofileSlice ?? [];
+      if (list.length === 0) {
+        setLoading(true);
+        getProfilesData(1, true);
+      }
+    }, [profileSlice?.id])
+  );
+
   const handleLoadMore = () => {
     if (isFetchingNextPage) return;
     const nextPage = page + 1;
@@ -142,10 +157,17 @@ useEffect(() => {
     getProfilesData(1, true);
   }, [getProfilesData]);
 
+  const waitingForProfile = !profileSlice?.id && !error;
+
   return (
     <View style={[styles.homeContainer, { paddingTop: safeTop }]}>
       <Hometop />
-      {loading && page === 1 ? (
+      {waitingForProfile ? (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading your profile...</Text>
+        </View>
+      ) : loading && page === 1 ? (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Finding matches...</Text>

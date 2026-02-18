@@ -4,6 +4,9 @@ import { supabase } from "../config/supabase";
 
 // 1. function ko async banayein
 export const webhooks = async (req, res) => {
+  if (!stripe) {
+    return res.status(503).json({ error: 'Payments not configured. Add STRIPE_SECRET_KEY to .env' });
+  }
   const sig = req.headers['stripe-signature'];
   const endpointSecret="whsec_84b9f60f123ab848eae178d4d20b214f1e982b81686c69f9ad2d1db0cf1c47c0"; 
 
@@ -48,10 +51,12 @@ export const webhooks = async (req, res) => {
   res.json({ received: true });
 };
 export const payments=async(req,res)=>{
-    console.log(req.body);
-    
-    const { amount, userId } = req.body; // Amount humesha cents mein hota hai (100 = $1)
-try {
+  if (!stripe) {
+    return res.status(503).json({ error: 'Payments not configured. Add STRIPE_SECRET_KEY to .env' });
+  }
+  console.log(req.body);
+  const { amount, userId } = req.body; // Amount humesha cents mein hota hai (100 = $1)
+  try {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount,
       currency: 'usd',

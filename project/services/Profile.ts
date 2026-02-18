@@ -97,17 +97,18 @@ export async function deleteProfile() {
   // 4️⃣ Return the deleted profile (optional)
   return deletedProfile;
 }
-export const fetchProfiles = async (token,data,pageNum) => {
-  const ip=`http://192.168.18.130:3000/api/v1/profiles?page=${pageNum}`
+const API_BASE = "http://192.168.18.130:3000/api/v1";
+
+export const fetchProfiles = async (userId: string, data: object, pageNum: number) => {
+  const url = `${API_BASE}/profiles?page=${pageNum}`;
   try {
     const response = await axios.post(
-      ip,
-      { 
-        data
-      }, // POST body, agar backend expect kar raha ho
+      url,
+      { data },
       {
         headers: {
-          Authorization: ` ${token}`,
+          Authorization: userId,
+          "Content-Type": "application/json",
         },
       }
     );

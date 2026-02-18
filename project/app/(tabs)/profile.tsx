@@ -53,7 +53,7 @@ export default function ProfileScreen() {
           )}
         </TouchableOpacity>
         <Text style={[styles.userName, { color: Colors.black }]}>
-          {profileSlice?.name || "User"}
+          {profileSlice?.full_name || profileSlice?.name || "User"}
         </Text>
       </View>
 
