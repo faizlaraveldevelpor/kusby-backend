@@ -1,0 +1,32 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript build output
+
+# Environment variables (Private Keys)
+.env
+.env.local
+.env.production
+.env.development
+tsconfig.json
+src/
+out/
+build/
+
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# PM2 logs and process files
+pids/
+logs/
+stats/
