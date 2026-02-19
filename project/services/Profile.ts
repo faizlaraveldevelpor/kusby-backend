@@ -97,7 +97,7 @@ export async function deleteProfile() {
   // 4️⃣ Return the deleted profile (optional)
   return deletedProfile;
 }
-const API_BASE = "http://192.168.18.130:3001/api/v1";
+const API_BASE = "http://10.215.213.72:3001/api/v1";
 
 export const fetchProfiles = async (userId: string, data: object, pageNum: number) => {
   const url = `${API_BASE}/profiles?page=${pageNum}`;

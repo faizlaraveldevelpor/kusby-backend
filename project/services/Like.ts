@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const createaction = async (actionData) => {
   // IP ko variable mein rakhna theek hai, lekin body mein data sahi bhejna zaroori hai
-  const url = "http://192.168.18.130:3001/api/v1/createaction";
+  const url = "http://10.215.213.72:3001/api/v1/createaction";
   console.log(actionData);
   
 
@@ -38,7 +38,7 @@ export const createaction = async (actionData) => {
 // Ab ye function userId ke sath page aur limit bhi lega
 export const fetchWhoLikedMe = async (currentUserId, page = 1, limit = 10) => {
   try {
-    const response = await axios.post('http://192.168.18.130:3001/api/v1/wholike', {
+    const response = await axios.post('http://10.215.213.72:3001/api/v1/wholike', {
       userId: currentUserId, // Login user ki ID
       page: page,            // Kaunsa page load karna hai
       limit: limit           // Ek baar mein kitni profiles chahiye
