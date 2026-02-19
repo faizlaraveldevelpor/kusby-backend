@@ -71,7 +71,7 @@
 //   };
 // }
 
-const API_URL = "http://10.215.213.72:3001/api/v1";
+const API_URL = "http://192.168.18.130:3001/api/v1";
 
 export const cancelSubscription = async (userId: string) => {
   try {
