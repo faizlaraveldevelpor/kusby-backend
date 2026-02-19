@@ -1,8 +1,0 @@
-node_modules/
-.expo/
-__MACOSX/
-*.tsbuildinfo
-
-# @generated expo-cli
-expo-env.d.ts
-# @end expo-cli
