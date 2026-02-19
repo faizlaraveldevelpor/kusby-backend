@@ -1,22 +1,50 @@
+import Stripe from "stripe";
+import { Request, Response } from "express";
 import { stripe } from "../config/Stripe";
 import { supabase } from "../config/supabase";
+import { getPaymentConfigFromDb } from "./paymentConfig";
 
-
-// 1. function ko async banayein
-export const webhooks = async (req, res) => {
-  if (!stripe) {
-    return res.status(503).json({ error: 'Payments not configured. Add STRIPE_SECRET_KEY to .env' });
+async function getStripeInstance(): Promise<Stripe | null> {
+  const row = await getPaymentConfigFromDb();
+  const fromDb = row?.key?.trim();
+  if (fromDb && (fromDb.startsWith("sk_test_") || fromDb.startsWith("sk_live_"))) {
+    return new Stripe(fromDb);
   }
-  const sig = req.headers['stripe-signature'];
-  const endpointSecret="whsec_84b9f60f123ab848eae178d4d20b214f1e982b81686c69f9ad2d1db0cf1c47c0"; 
+  return stripe;
+}
+
+async function getWebhookSecret(): Promise<string | null> {
+  const row = await getPaymentConfigFromDb();
+  const fromDb = row?.webhook_secret?.trim();
+  if (fromDb && fromDb.startsWith("whsec_")) return fromDb;
+  return (process.env.STRIPE_WEBHOOK_SECRET || "").trim() || null;
+}
+
+export const webhooks = async (req: Request, res: Response) => {
+  const webhookSecret = await getWebhookSecret();
+  if (!webhookSecret) {
+    console.log("❌ Webhook secret not found (DB or STRIPE_WEBHOOK_SECRET)");
+    return res.status(503).json({ error: "Webhook secret not configured" });
+  }
+
+  const stripeInstance = await getStripeInstance();
+  if (!stripeInstance) {
+    return res.status(503).json({ error: "Payments not configured (DB key or .env)" });
+  }
+
+  const sig = req.headers["stripe-signature"];
+  if (!sig) {
+    return res.status(400).json({ error: "Missing stripe-signature header" });
+  }
 
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    event = stripeInstance.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
-    console.log(`❌ Webhook Error: ${err.message}`);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.log(`❌ Webhook Error: ${errMsg}`);
+    return res.status(400).send(`Webhook Error: ${errMsg}`);
   }
 
   if (event.type === 'payment_intent.succeeded') {
@@ -50,14 +78,15 @@ export const webhooks = async (req, res) => {
 
   res.json({ received: true });
 };
-export const payments=async(req,res)=>{
-  if (!stripe) {
-    return res.status(503).json({ error: 'Payments not configured. Add STRIPE_SECRET_KEY to .env' });
+export const payments = async (req: Request, res: Response) => {
+  const stripeInstance = await getStripeInstance();
+  if (!stripeInstance) {
+    return res.status(503).json({ error: "Payments not configured (DB key or .env)" });
   }
   console.log(req.body);
-  const { amount, userId } = req.body; // Amount humesha cents mein hota hai (100 = $1)
+  const { amount, userId } = req.body;
   try {
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntent = await stripeInstance.paymentIntents.create({
       amount: amount,
       currency: 'usd',
       metadata: { userId: userId }, // Ye metadata webhook mein wapis milega
@@ -68,7 +97,8 @@ export const payments=async(req,res)=>{
       clientSecret: paymentIntent.client_secret,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    const errMsg = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: errMsg });
   }
 };
 

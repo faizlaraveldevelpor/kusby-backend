@@ -1,7 +1,8 @@
-import {Router} from "express";
-import { allprofiles } from "../controller/Profiles";
-import { handleInteraction } from "../services/actions";
- const Profiles=Router();
-Profiles.post("/profiles",allprofiles) 
+import { Router } from "express";
+import { allprofiles, updateCategory } from "../controller/Profiles";
 
-export default Profiles
+const Profiles = Router();
+Profiles.post("/profiles", allprofiles);
+Profiles.patch("/profiles/category", updateCategory);
+
+export default Profiles;

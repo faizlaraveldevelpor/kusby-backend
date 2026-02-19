@@ -15,6 +15,7 @@ function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon
 
 // ================= Main Controller =================
 export async function getprofiles(req: Request, res: Response, userId?: string) {
+console.log(req.body);
 
   try {
     if (!userId) return res.status(401).json({ error: "User ID missing" });
@@ -97,12 +98,12 @@ export async function getprofiles(req: Request, res: Response, userId?: string) 
     // Admin Blocked Users
     adminBlocked.data?.forEach(p => excludedIds.add(p.id));
 
-    // Login user ki apni blocked list
-    if (loginUser.blocked_profiles) {
+    // Login user ki apni blocked list (sirf array ho to use karein)
+    if (Array.isArray(loginUser.blocked_profiles)) {
       loginUser.blocked_profiles.forEach((id: string) => excludedIds.add(id));
     }
 
-    // 5. DATABASE FILTERS
+    // 5. DATABASE FILTERS (cetagory = user ki select ki hui category, frontend se aati hai)
     const { 
         genderFilter, minAge, maxAge, maxDistance, 
         professionFilter = [], userInterests = [],
@@ -110,17 +111,14 @@ export async function getprofiles(req: Request, res: Response, userId?: string) 
     } = req.body?.data || {};
 
     let query = supabase.from("profiles").select("*", { count: "exact" });
-    // query = query.eq("adminblock", null);
-    // Apply All Exclusions at once
-    const finalExcludeArray = Array.from(excludedIds).filter(id => id);
+    // Apply All Exclusions at once (sirf valid string IDs)
+    const finalExcludeArray = Array.from(excludedIds).filter((id): id is string => id != null && typeof id === "string");
     if (finalExcludeArray.length > 0) {
       query = query.not("id", "in", `(${finalExcludeArray.join(",")})`);
     }
-    
-
 
     if (genderFilter) query = query.eq("gender", genderFilter);
-    if (professionFilter.length > 0) query = query.in("profession", professionFilter);
+    if (Array.isArray(professionFilter) && professionFilter.length > 0) query = query.in("profession", professionFilter);
     if (cetagory) query = query.eq("cetagory", cetagory);
 
     // DOB Logic
@@ -133,6 +131,7 @@ export async function getprofiles(req: Request, res: Response, userId?: string) 
       query = query.lte("date_of_birth", date.toISOString().split("T")[0]);
     }
 
+    query = query.order("created_at", { ascending: false }); // Deterministic order
     const { data: profiles, error, count } = await query;
     if (error) return res.status(400).json({ error: error.message });
 
@@ -149,11 +148,11 @@ export async function getprofiles(req: Request, res: Response, userId?: string) 
       return { ...profile, distance_km: Number(dist.toFixed(2)) };
     });
 
+    const hasUserLocation = userLat != null && userLon != null && !isNaN(userLat) && !isNaN(userLon);
     filteredProfiles = filteredProfiles.filter((p: any) => {
-      const matchesDistance = maxDistance ? (p.distance_km !== null && p.distance_km <= maxDistance) : true;
-      const matchesInterests = userInterests.length > 0 
-        ? p.interests?.some((i: string) => userInterests.includes(i)) 
-        : true;
+      // Jab user ka location na ho to distance filter mat lagao (sab dikhao)
+      const matchesDistance = !hasUserLocation ? true : (maxDistance ? (p.distance_km != null && p.distance_km <= maxDistance) : true);
+      const matchesInterests = userInterests.length > 0 ? p.interests?.some((i: string) => userInterests.includes(i)) : true;
       return matchesDistance && matchesInterests;
     });
 
@@ -176,4 +175,17 @@ export async function getprofiles(req: Request, res: Response, userId?: string) 
     console.error("Critical Error:", err);
     return res.status(500).json({ error: "Internal Server Error" });
   }
+}
+
+// ================= Update Profile Category =================
+export async function updateProfileCategory(userId: string, cetagory: string) {
+  if (!userId) throw new Error("User ID required");
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ cetagory: cetagory })
+    .eq("id", userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 }

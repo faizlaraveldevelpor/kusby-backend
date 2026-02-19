@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { supabase } from "../config/supabase";
 
 export const handleInteraction = async (req: Request, res: Response) => {
+  
   try {
     const { loginUserId, currentUserId, type } = req.body as {
       loginUserId: string;
@@ -122,6 +123,7 @@ export const handleInteraction = async (req: Request, res: Response) => {
       match: isMatch ? { user1: loginUserId, user2: currentUserId } : null,
       swipes_remaining: userData.is_vip ? "Unlimited" : (20 - (userData.daily_swipes_count + 1))
     });
+        
 
   } catch (err: any) {
     console.error("Error in handleInteraction:", err);
@@ -151,15 +153,18 @@ export async function getPeopleWhoLikedMe(req: Request, res: Response) {
       supabase.from("matches").select("user1").eq("user2", userId),
     ]);
 
-    // Sab excluded IDs ko ek array mein jama karein
-    const excludedIds = [
+    // Sab excluded IDs ko ek array mein jama karein (sirf valid string UUIDs)
+    const rawExcluded = [
       userId,
       ...(m1.data?.map(m => m.user2) || []),
       ...(m2.data?.map(m => m.user1) || []),
-      ...(loginUser.blocked_profiles || [])
+      ...(Array.isArray(loginUser.blocked_profiles) ? loginUser.blocked_profiles : [])
     ];
+    const excludedIds = rawExcluded.filter((id): id is string => id != null && typeof id === "string");
 
     // 3. Query with Pagination & Database-level Filtering
+    // PostgREST/Supabase: .not("col", "in", "(id1,id2)") - same as Profile.ts
+    const excludedList = excludedIds.length ? `(${excludedIds.join(",")})` : "()";
     const { data: interactions, error: interactionError, count } = await supabase
       .from("user_interactions")
       .select(`
@@ -177,17 +182,22 @@ export async function getPeopleWhoLikedMe(req: Request, res: Response) {
       `, { count: "exact" }) // 'count' exact se total records milte hain
       .eq("to_user", userId)
       .in("type", ["like", "superlike"])
-      .not("from_user", "in", `(${excludedIds.join(",")})`) // DB level par filtering
+      .not("from_user", "in", excludedList) // DB level par filtering
       .order("created_at", { ascending: false }) // Newest likes first
       .range(from, to); // Pagination apply yahan ho rahi hai
 
-    if (interactionError) return res.status(400).json({ error: interactionError.message });
+    if (interactionError) {
+      console.error("[getPeopleWhoLikedMe] Supabase error:", interactionError.message, interactionError);
+      return res.status(400).json({ error: interactionError.message, code: interactionError.code });
+    }
 
-    // 4. Formatting data
-    const formattedData = interactions?.map(item => ({
-      ...item.profiles,
-      interaction_type: item.type
-    })) || [];
+    // 4. Formatting data (profiles null ho to skip)
+    const formattedData = (interactions ?? [])
+      .filter(item => item.profiles != null)
+      .map(item => ({
+        ...(item.profiles as object),
+        interaction_type: item.type
+      }));
 
     // 5. Response with Metadata
     return res.status(200).json({
