@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { supabase } from "../config/supabase";
+import { sendExpoPush, isValidExpoPushToken } from "./pushNotifications";
 
 export const handleInteraction = async (req: Request, res: Response) => {
   
@@ -99,6 +100,25 @@ export const handleInteraction = async (req: Request, res: Response) => {
       await supabase
         .from("conversations")
         .upsert({ user1: userA, user2: userB }, { onConflict: 'user1,user2' });
+
+      // 5b. Match notification: currentUserId ko bhejo (unhe pata chale ke loginUserId ne like kiya = match)
+      const [{ data: otherProfile }, { data: myProfile }] = await Promise.all([
+        supabase.from("profiles").select("expo_push_token").eq("id", currentUserId).maybeSingle(),
+        supabase.from("profiles").select("full_name").eq("id", loginUserId).maybeSingle(),
+      ]);
+      const pushToken = otherProfile?.expo_push_token;
+      const likerName = myProfile?.full_name || "Someone";
+      if (isValidExpoPushToken(pushToken)) {
+        sendExpoPush({
+          to: pushToken,
+          title: "It's a match! 🎉",
+          body: `${likerName} liked you back. Start the conversation!`,
+          data: { type: "match" },
+          sound: "default",
+          priority: "high",
+          channelId: "default",
+        }).catch(() => {});
+      }
 
     } else {
       // 6️⃣ Normal Interaction (No match yet)
