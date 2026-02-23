@@ -4,11 +4,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { 
   Search, ChevronLeft, ChevronRight, UserCircle, 
-  UserMinus, ShieldCheck, Eye, MoreHorizontal, ShieldAlert, ShieldX
+  UserMinus, ShieldCheck, ShieldAlert, ShieldX, Trash2
 } from "lucide-react";
 
 // APIs
-import { getAllProfiles, toggleAdminStatus, toggleUserBlock } from "@/utils/profiles";
+import { getAllProfiles, toggleAdminStatus, toggleUserBlock, deleteProfile } from "@/utils/profiles";
 
 // --- SUB-COMPONENTS ---
 
@@ -91,7 +91,6 @@ export default function AdminDashboard() {
         const { data, error } = await toggleUserBlock(user.id);
         if (error) throw error;
 
-        // Backend se naya boolean state lekar UI update
         setProfiles(prev => prev.map(u => 
           u.id === user.id ? { ...u, adminblock: data.adminblock } : u
         ));
@@ -99,6 +98,20 @@ export default function AdminDashboard() {
         alert("Action failed");
         fetchTableData();
       }
+    }
+  };
+
+  // 3. Delete User (profile + auth)
+  const handleDeleteUser = async (user: any) => {
+    if (!confirm(`Permanently delete user "${user.full_name}"? This cannot be undone.`)) return;
+    try {
+      const { error } = await deleteProfile(user.id);
+      if (error) throw error;
+      setProfiles(prev => prev.filter(u => u.id !== user.id));
+      setTotalCount(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete user");
+      fetchTableData();
     }
   };
 
@@ -158,8 +171,7 @@ export default function AdminDashboard() {
                     <StatusPill isBlocked={user.adminblock} />
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      
+                    <div className="flex justify-end gap-2">
                       {/* Admin Toggle */}
                       <button 
                         onClick={() => handleAdminToggle(user)}
@@ -169,7 +181,7 @@ export default function AdminDashboard() {
                         <ShieldAlert size={16} />
                       </button>
 
-                      {/* Block Toggle (Red button when blocked) */}
+                      {/* Block Toggle */}
                       <button 
                         onClick={() => handleToggleBlock(user)}
                         className={`p-2 rounded-lg transition-all ${user.adminblock ? 'bg-rose-600 text-white shadow-lg shadow-rose-200' : 'bg-zinc-100 text-zinc-600 hover:bg-rose-50 hover:text-rose-600'}`}
@@ -178,6 +190,15 @@ export default function AdminDashboard() {
                         {user.adminblock ? <ShieldX size={16} /> : <UserMinus size={16} />}
                       </button>
 
+                      {/* Delete User */}
+                      <button 
+                        onClick={() => handleDeleteUser(user)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 text-xs font-semibold"
+                        title="Delete User"
+                      >
+                        <Trash2 size={16} />
+                        <span>Delete</span>
+                      </button>
                     </div>
                   </td>
                 </tr>

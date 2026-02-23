@@ -9,7 +9,7 @@
 require("dotenv").config();
 const { createClient } = require("@supabase/supabase-js");
 
-const SUPABASE_URL = process.env.SUPABASE_URL || "http://207.180.234.119:8000";
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://supabase.kubsy.app";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
 if (!SUPABASE_SERVICE_ROLE_KEY) {

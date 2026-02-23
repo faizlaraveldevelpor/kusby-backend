@@ -1,4 +1,4 @@
-import { createBrowserClient } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { supabaseUrl, supabaseAnonKey } from '@/config/supabase'
 
@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  const supabase = createBrowserClient(
+  const supabase = createServerClient(
     supabaseUrl,
     supabaseAnonKey,
     {
@@ -18,11 +18,9 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request,
           })
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)

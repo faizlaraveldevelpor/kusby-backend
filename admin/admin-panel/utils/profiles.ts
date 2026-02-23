@@ -53,7 +53,7 @@ export const getDailyStats = async () => {
     .gte('created_at', isoDate);
 
   // Data ko process karke daily counts mein badlein
-  const statsMap = {};
+  const statsMap: Record<string, { date: string; profiles: number; matches: number }> = {};
 
   // Initialize last 30 days with 0
   for (let i = 29; i >= 0; i--) {
@@ -75,7 +75,7 @@ export const getDailyStats = async () => {
 
   return Object.values(statsMap);
 };
-export const getAllProfiles = async (page = 1, pageSize = 10, filters = {}) => {
+export const getAllProfiles = async (page = 1, pageSize = 10, filters: { name?: string; gender?: string } = {}) => {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
@@ -103,9 +103,8 @@ export const getAllProfiles = async (page = 1, pageSize = 10, filters = {}) => {
  * Toggle Admin Status
  * @param {string} userId - User ki unique ID
  */
-export const toggleAdminStatus = async (userId) => {
+export const toggleAdminStatus = async (userId: string) => {
   try {
-    // 1. Pehle current admin status fetch karein
     const { data: profile, error: fetchError } = await supabase
       .from('profiles')
       .select('admin')
@@ -114,10 +113,8 @@ export const toggleAdminStatus = async (userId) => {
 
     if (fetchError) throw fetchError;
 
-    // 2. Status ko flip karein (true hai to false, false hai to true)
     const newStatus = !profile.admin;
 
-    // 3. Database mein update karein
     const { data, error: updateError } = await supabase
       .from('profiles')
       .update({ admin: newStatus })
@@ -128,8 +125,8 @@ export const toggleAdminStatus = async (userId) => {
     if (updateError) throw updateError;
 
     return { data, error: null };
-  } catch (error) {
-    console.error('Error toggling admin role:', error.message);
+  } catch (error: unknown) {
+    console.error('Error toggling admin role:', (error as Error).message);
     return { data: null, error };
   }
 };
@@ -137,9 +134,8 @@ export const toggleAdminStatus = async (userId) => {
  * Toggle Block Status
  * @param {string} userId - User ki ID
  */
-export const toggleUserBlock = async (userId) => {
+export const toggleUserBlock = async (userId: string) => {
   try {
-    // 1. Current status fetch karein (adminblock column)
     const { data: profile, error: fetchError } = await supabase
       .from('profiles')
       .select('adminblock')
@@ -148,10 +144,8 @@ export const toggleUserBlock = async (userId) => {
 
     if (fetchError) throw fetchError;
 
-    // 2. Status flip karein
     const newBlockStatus = !profile.adminblock;
 
-    // 3. Update karein
     const { data, error: updateError } = await supabase
       .from('profiles')
       .update({ adminblock: newBlockStatus })
@@ -162,8 +156,28 @@ export const toggleUserBlock = async (userId) => {
     if (updateError) throw updateError;
 
     return { data, error: null };
-  } catch (error) {
-    console.error('Error toggling block status:', error.message);
+  } catch (error: unknown) {
+    console.error('Error toggling block status:', (error as Error).message);
     return { data: null, error };
+  }
+};
+
+/**
+ * Delete user: profile + auth user (calls API with service role)
+ */
+export const deleteProfile = async (userId: string): Promise<{ error: Error | null }> => {
+  try {
+    const res = await fetch("/api/delete-profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { error: new Error(data.error || "Failed to delete user") };
+    }
+    return { error: null };
+  } catch (err) {
+    return { error: err instanceof Error ? err : new Error("Failed to delete user") };
   }
 };
