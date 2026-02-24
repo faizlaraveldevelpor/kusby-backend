@@ -1,39 +1,70 @@
 "use client";
 
 import React, { useState } from "react";
-import { ShieldCheck, Phone, ArrowRight, Loader2, KeyRound } from "lucide-react";
+import { ShieldCheck, Phone, ArrowRight, Loader2, KeyRound, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { handleAdminLogin, verifyAdminOtp } from "@/utils/auth";
 
+const COUNTRY_CODES = [
+  { code: "92", country: "Pakistan", flag: "🇵🇰" },
+  { code: "91", country: "India", flag: "🇮🇳" },
+  { code: "1", country: "US / Canada", flag: "🇺🇸" },
+  { code: "44", country: "UK", flag: "🇬🇧" },
+  { code: "971", country: "UAE", flag: "🇦🇪" },
+  { code: "966", country: "Saudi Arabia", flag: "🇸🇦" },
+  { code: "973", country: "Bahrain", flag: "🇧🇭" },
+  { code: "965", country: "Kuwait", flag: "🇰🇼" },
+  { code: "974", country: "Qatar", flag: "🇶🇦" },
+  { code: "968", country: "Oman", flag: "🇴🇲" },
+  { code: "20", country: "Egypt", flag: "🇪🇬" },
+  { code: "27", country: "South Africa", flag: "🇿🇦" },
+  { code: "49", country: "Germany", flag: "🇩🇪" },
+  { code: "33", country: "France", flag: "🇫🇷" },
+  { code: "61", country: "Australia", flag: "🇦🇺" },
+  { code: "81", country: "Japan", flag: "🇯🇵" },
+  { code: "86", country: "China", flag: "🇨🇳" },
+  { code: "90", country: "Turkey", flag: "🇹🇷" },
+  { code: "62", country: "Indonesia", flag: "🇮🇩" },
+  { code: "60", country: "Malaysia", flag: "🇲🇾" },
+  { code: "65", country: "Singapore", flag: "🇸🇬" },
+  { code: "234", country: "Nigeria", flag: "🇳🇬" },
+  { code: "232", country: "Sierra Leone", flag: "🇸🇱" },
+  { code: "254", country: "Kenya", flag: "🇰🇪" },
+  { code: "55", country: "Brazil", flag: "🇧🇷" },
+  { code: "52", country: "Mexico", flag: "🇲🇽" },
+];
+
 export default function AdminLoginPage() {
+  const [countryCode, setCountryCode] = useState("92");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1); // 1: Number Input, 2: OTP Input
   const [loading, setLoading] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const router = useRouter();
+
+  const selectedCountry = COUNTRY_CODES.find((c) => c.code === countryCode) || COUNTRY_CODES[0];
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
     let onlyNums = value.replace(/[^0-9]/g, "");
-    if (onlyNums.startsWith("0")) {
+    if (countryCode !== "1" && onlyNums.startsWith("0")) {
       onlyNums = onlyNums.substring(1);
     }
-    if (onlyNums.length <= 10) {
-      setPhone(onlyNums);
-    }
+    if (onlyNums.length <= 15) setPhone(onlyNums);
   };
 
   // --- Step 1: Request OTP ---
   const handleSubmitPhone = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone || phone.length < 10) {
-      alert("Please enter a valid 10-digit phone number.");
+    const minLen = countryCode === "1" ? 10 : 10;
+    if (!phone || phone.length < minLen) {
+      alert(`Please enter a valid phone number (at least ${minLen} digits).`);
       return;
     }
 
     setLoading(true);
-    const fullPhone = `+92${phone}`;
-    console.log(fullPhone);
+    const fullPhone = `+${countryCode}${phone}`;
     
     const result = await handleAdminLogin(fullPhone);
 
@@ -54,7 +85,7 @@ export default function AdminLoginPage() {
     }
 
     setLoading(true);
-    const fullPhone = `+92${phone}`;
+    const fullPhone = `+${countryCode}${phone}`;
     
     const result = await verifyAdminOtp(fullPhone, otp);
    console.log(result);
@@ -83,8 +114,8 @@ export default function AdminLoginPage() {
           </h1>
           <p className="text-zinc-500 font-medium">
             {step === 1 
-              ? "Enter your number (excluding starting 0)" 
-              : `Code sent to +92 ${phone}`}
+              ? "Select country and enter your number" 
+              : `Code sent to +${countryCode} ${phone}`}
           </p>
         </div>
 
@@ -93,23 +124,53 @@ export default function AdminLoginPage() {
           <form onSubmit={step === 1 ? handleSubmitPhone : handleSubmitOtp} className="space-y-6">
             
             {step === 1 ? (
-              // Phone Input
+              // Phone Input with Country Code Picker
               <div>
                 <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 ml-1">
                   Phone Number
                 </label>
-                <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 border-r pr-3 border-zinc-100">
-                    <Phone size={16} className="text-zinc-400 group-focus-within:text-rose-500 transition-colors" />
-                    <span className="text-sm font-bold text-zinc-400">+92</span>
+                <div className="relative group flex rounded-2xl ring-1 ring-zinc-200 focus-within:ring-2 focus-within:ring-rose-500 bg-zinc-50 transition-all">
+                  <div className="flex items-center gap-1.5 pl-4 pr-2 border-r border-zinc-200">
+                    <Phone size={16} className="text-zinc-400 group-focus-within:text-rose-500 shrink-0" />
+                    <button
+                      type="button"
+                      onClick={() => setPickerOpen((o) => !o)}
+                      className="flex items-center gap-1.5 py-2 min-w-[72px] text-left"
+                    >
+                      <span className="text-lg" aria-hidden>{selectedCountry.flag}</span>
+                      <span className="text-sm font-bold text-zinc-700">+{countryCode}</span>
+                      <ChevronDown size={14} className={`text-zinc-400 shrink-0 transition-transform ${pickerOpen ? "rotate-180" : ""}`} />
+                    </button>
                   </div>
+                  {pickerOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" aria-hidden onClick={() => setPickerOpen(false)} />
+                      <div className="absolute left-0 top-full mt-1 w-64 max-h-56 overflow-y-auto bg-white rounded-2xl shadow-xl border border-zinc-100 z-20 py-1">
+                        {COUNTRY_CODES.map((c) => (
+                          <button
+                            key={c.code}
+                            type="button"
+                            onClick={() => {
+                              setCountryCode(c.code);
+                              setPickerOpen(false);
+                            }}
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-zinc-50 ${c.code === countryCode ? "bg-rose-50 text-rose-700" : "text-zinc-800"}`}
+                          >
+                            <span className="text-xl">{c.flag}</span>
+                            <span className="font-medium text-sm">{c.country}</span>
+                            <span className="ml-auto text-sm font-bold text-zinc-500">+{c.code}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                   <input 
                     type="text"
                     inputMode="numeric"
-                    placeholder="300 1234567"
+                    placeholder={countryCode === "1" ? "202 555 0123" : "300 1234567"}
                     value={phone}
                     onChange={handlePhoneChange}
-                    className="w-full h-14 pl-20 pr-4 bg-zinc-50 border-none rounded-2xl ring-1 ring-zinc-200 focus:ring-2 focus:ring-rose-500 outline-none transition-all font-bold text-zinc-900"
+                    className="flex-1 h-14 pl-3 pr-4 bg-transparent border-none rounded-r-2xl outline-none font-bold text-zinc-900 min-w-0"
                   />
                 </div>
               </div>
