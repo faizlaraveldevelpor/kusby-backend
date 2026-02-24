@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { supabase } from "../config/supabase";
+import { supabase, getSupabaseAdmin } from "../config/supabase";
 
 // ================= Helper: Distance Function =================
 function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -152,7 +152,11 @@ console.log(req.body);
     filteredProfiles = filteredProfiles.filter((p: any) => {
       // Jab user ka location na ho to distance filter mat lagao (sab dikhao)
       const matchesDistance = !hasUserLocation ? true : (maxDistance ? (p.distance_km != null && p.distance_km <= maxDistance) : true);
-      const matchesInterests = userInterests.length > 0 ? p.interests?.some((i: string) => userInterests.includes(i)) : true;
+      // Interest match: case-insensitive (Sports / sports dono match)
+      const userInterestsLower = (userInterests || []).map((x: string) => String(x).toLowerCase());
+      const matchesInterests = userInterestsLower.length === 0
+        ? true
+        : (p.interests || []).some((i: string) => userInterestsLower.includes(String(i).toLowerCase()));
       return matchesDistance && matchesInterests;
     });
 
@@ -188,4 +192,16 @@ export async function updateProfileCategory(userId: string, cetagory: string) {
     .single();
   if (error) throw error;
   return data;
+}
+
+// ================= Update Expo Push Token (RLS bypass – service role) =================
+export async function updateExpoPushToken(userId: string, expoPushToken: string | null) {
+  if (!userId) throw new Error("User ID required");
+  const admin = getSupabaseAdmin();
+  if (!admin) throw new Error("SUPABASE_SERVICE_ROLE_KEY not set");
+  const { error } = await admin
+    .from("profiles")
+    .update({ expo_push_token: expoPushToken })
+    .eq("id", userId);
+  if (error) throw error;
 }
