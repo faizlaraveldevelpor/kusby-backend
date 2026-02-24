@@ -34,11 +34,15 @@ export const savePushToken = async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Authorization header missing" });
   }
   const { expo_push_token } = req.body || {};
+  const tokenStr = expo_push_token != null ? String(expo_push_token).trim() : null;
+  console.log("[Push] savePushToken: userId length=" + userId.length + ", token=" + (tokenStr ? tokenStr.substring(0, 30) + "..." : "null"));
   try {
-    await updateExpoPushToken(userId, expo_push_token ?? null);
+    await updateExpoPushToken(userId, tokenStr || null);
+    console.log("[Push] savePushToken: OK for user " + userId.substring(0, 8) + "...");
     return res.status(200).json({ success: true });
   } catch (err: any) {
-    console.error("Save push token error:", err?.message || err);
-    return res.status(500).json({ error: err?.message || "Failed to save push token" });
+    const msg = err?.message || String(err);
+    console.error("[Push] savePushToken error:", msg);
+    return res.status(500).json({ error: msg });
   }
 };

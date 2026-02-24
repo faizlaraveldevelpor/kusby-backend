@@ -198,10 +198,16 @@ export async function updateProfileCategory(userId: string, cetagory: string) {
 export async function updateExpoPushToken(userId: string, expoPushToken: string | null) {
   if (!userId) throw new Error("User ID required");
   const admin = getSupabaseAdmin();
-  if (!admin) throw new Error("SUPABASE_SERVICE_ROLE_KEY not set");
-  const { error } = await admin
+  if (!admin) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY not set in .env – add it from Supabase Dashboard → Settings → API");
+  }
+  const { data, error } = await admin
     .from("profiles")
     .update({ expo_push_token: expoPushToken })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("id");
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error("No profile row found for this user – create profile first or check user id");
+  }
 }
