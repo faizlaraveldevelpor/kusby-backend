@@ -8,7 +8,7 @@ import { getMonimeWebhookSecretFromDb } from "./paymentConfig";
 import { supabase } from "../config/supabase";
 
 const MONIME_API = "https://api.monime.io";
-const MONIME_VERSION = "caph-2025-08-23";
+const MONIME_VERSION = "caph.2025-08-23";
 const WEBHOOK_SIGNATURE_HEADER = "monime-signature";
 const WEBHOOK_MAX_AGE_SEC = 5 * 60;
 
@@ -38,16 +38,15 @@ export async function createMonimeCheckout(
 
   const body = {
     name: name,
-    line_items: [
+    lineItems: [
       {
         name: "Kubsy VIP Premium",
         quantity: 1,
-        unit_amount: amount,
-        currency,
+        price: { currency, value: amount },
       },
     ],
-    success_url: successUrl,
-    cancel_url: cancelUrl || successUrl,
+    successUrl,
+    cancelUrl: cancelUrl || successUrl,
     metadata: { userId },
   };
 
@@ -66,8 +65,14 @@ export async function createMonimeCheckout(
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const msg = data?.message || data?.error || `Monime API ${res.status}`;
-      return { error: msg };
+      const raw =
+        data?.message ?? data?.error ?? data?.details ?? data?.msg ?? `Monime API ${res.status}`;
+      const msg = typeof raw === "string" ? raw : (raw?.message ?? JSON.stringify(raw));
+      const hint =
+        res.status === 403
+          ? " Token/space must have permission to create checkout sessions. Check token permissions and Space role in the Monime dashboard."
+          : "";
+      return { error: `${msg}${hint}` };
     }
 
     const checkoutUrl = data.url ?? data.checkout_url ?? data.checkoutUrl;
