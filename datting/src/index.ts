@@ -20,13 +20,15 @@ import Profiles from "./routes/Profile";
 import Chats from "./routes/chat";
 import Payments from "./routes/Payments";
 import { webhooks } from "./services/payments";
+import { monimeWebhookHandler } from "./services/monime";
 
 const app = express();
 
 app.use(cors({ origin: "*", credentials: true }));
 
-// Webhook ko express.json() se PEHLE register karo – Stripe ko raw body chahiye signature ke liye
+// Webhooks – Stripe (same), Monime (naya) – raw body signature ke liye
 app.post("/api/v1/webhook", express.raw({ type: "application/json" }), webhooks);
+app.post("/api/v1/webhook-monime", express.raw({ type: "application/json" }), monimeWebhookHandler);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
