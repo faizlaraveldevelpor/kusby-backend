@@ -1,13 +1,25 @@
+import path from "path";
+import Dotenv from "dotenv";
+
+// 1. Load kubsy/datting/.env
+Dotenv.config({});
+
+// 2. Push token save ke liye: agar SUPABASE_SERVICE_ROLE_KEY nahi mili to self-hosted supabase/docker/.env se load karo
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  const dockerEnvPath = path.resolve(process.cwd(), "../../supabase/docker/.env");
+  Dotenv.config({ path: dockerEnvPath });
+  if (process.env.SERVICE_ROLE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SERVICE_ROLE_KEY;
+  }
+}
+
 import express from "express";
 import cors from "cors";
 import actions from "./routes/actions";
 import Profiles from "./routes/Profile";
 import Chats from "./routes/chat";
 import Payments from "./routes/Payments";
-import Dotenv from "dotenv";
 import { webhooks } from "./services/payments";
-
-Dotenv.config({});
 
 const app = express();
 

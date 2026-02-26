@@ -196,6 +196,8 @@ export async function updateProfileCategory(userId: string, cetagory: string) {
 
 // ================= Update Expo Push Token (RLS bypass – service role) =================
 export async function updateExpoPushToken(userId: string, expoPushToken: string | null) {
+  console.log(userId, expoPushToken);
+  
   if (!userId) throw new Error("User ID required");
   const admin = getSupabaseAdmin();
   if (!admin) {

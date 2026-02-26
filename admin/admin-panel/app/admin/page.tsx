@@ -67,7 +67,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-black tracking-tight">Tinder Admin</h1>
+          <h1 className="text-3xl font-black tracking-tight">Kubsy Admin</h1>
           <p className="text-zinc-500 font-medium italic">Real-time Growth Analytics</p>
         </div>
         <button className="rounded-xl bg-zinc-900 px-6 py-2.5 text-sm font-bold text-white shadow-lg">Export Data</button>

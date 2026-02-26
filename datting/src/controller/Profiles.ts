@@ -29,6 +29,8 @@ export const updateCategory = async (req: Request, res: Response) => {
 
 /** Expo push token save – backend se DB update (RLS bypass via service role) */
 export const savePushToken = async (req: Request, res: Response) => {
+  console.log(req);
+  
   const userId = (req.headers.authorization || "").toString().trim();
   if (!userId) {
     return res.status(401).json({ error: "Authorization header missing" });
@@ -43,6 +45,9 @@ export const savePushToken = async (req: Request, res: Response) => {
   } catch (err: any) {
     const msg = err?.message || String(err);
     console.error("[Push] savePushToken error:", msg);
-    return res.status(500).json({ error: msg });
+    if (msg.includes("SUPABASE_SERVICE_ROLE_KEY not set")) {
+      return res.status(503).json({ error: "Server config: SUPABASE_SERVICE_ROLE_KEY not set. Push token not saved." });
+    }
+    return res.status(500).json({ error: msg || "Failed to save push token" });
   }
 };
